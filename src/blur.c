@@ -172,9 +172,9 @@ IplImage* blurPSF(IplImage *img, IplImage *psf)
         /*printf("\n");*/
     }
 
-    fftw_destory_plan(plan_f_img);
-    fftw_destory_plan(plan_f_psf);
-    fftw_destory_plan(plan_if_dst);
+    fftw_destroy_plan(plan_f_img);
+    fftw_destroy_plan(plan_f_psf);
+    fftw_destroy_plan(plan_if_dst);
 
     fftw_free(imgIn);
     fftw_free(psfIn);

@@ -47,15 +47,34 @@ int main( int argc, char* argv[]){
   IplImage* bl1 = blurPSF(imgSplit[0], psfImg);
   IplImage* bl2 = blurPSF(imgSplit[1], psfImg);
   IplImage* bl3 = blurPSF(imgSplit[2], psfImg);
-  IplImage* bl = cvMerge(bl1, bl2, bl3, NULL);
+  IplImage* bl = cvClone(img);
+  cvMerge(bl1, bl2, bl3, NULL, bl);
 
   IplImage* dbl1 = deblurFilter(bl1, psfImg);
   IplImage* dbl2 = deblurFilter(bl2, psfImg);
   IplImage* dbl3 = deblurFilter(bl3, psfImg);
-  IplImage* dbl = cvMerge(dbl1, dbl2, dbl3, NULL);
+  IplImage* dbl = cvClone(img);
+  cvMerge(dbl1, dbl2, dbl3, NULL, dbl);
 
   cvSaveImage("yun_512_512_psf.bmp", psfImg, 0);
   cvSaveImage("yun_512_512_blur.bmp", bl, 0);
   cvSaveImage("yun_512_512_deblur.bmp", dbl, 0);
+
+  cvReleaseImage(&imgSplit[0]);
+  cvReleaseImage(&imgSplit[1]);
+  cvReleaseImage(&imgSplit[2]);
+  
+  cvReleaseImage(&psfImg);
+
+  cvReleaseImage(&bl);
+  cvReleaseImage(&bl1);
+  cvReleaseImage(&bl2);
+  cvReleaseImage(&bl3);
+
+  cvReleaseImage(&dbl);
+  cvReleaseImage(&dbl1);
+  cvReleaseImage(&dbl2);
+  cvReleaseImage(&dbl3);
+
   return 0;
 }
