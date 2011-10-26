@@ -17,6 +17,7 @@
 #define BLOCK_SIZE 16 //2^nのほうが都合が良い
 
 #define IMG_ELEM(img, h, w) ( ((uchar*) ((img)->imageData + (h) * (img)->widthStep))[(w)] )
+#define max(a,b) (((a)<(b))?(b):(a))
 
 
 #endif 
