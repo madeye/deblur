@@ -6,6 +6,11 @@
 #include <include.h>
 #include <fftw3.h>
 
+// cuda
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <cufft.h>
+
 IplImage* deblurFilter(IplImage *img, IplImage *psf)
 {
     int height = img->height;
@@ -41,7 +46,7 @@ IplImage* deblurFilter(IplImage *img, IplImage *psf)
             /*int y = height - h;*/
             /*int x = width - w;*/
             psfIn[k][0] = (double)IMG_ELEM(psf, h, w) / 256.0;
-            imgIn[k][1] = 0.;
+            psfIn[k][1] = 0.;
         }
     }
 
@@ -90,6 +95,85 @@ IplImage* deblurFilter(IplImage *img, IplImage *psf)
     fftw_free(imgFreq);
     fftw_free(psfFreq);
     fftw_free(dstFreq);
+
+    return dst;
+
+}
+
+// deblur with CUFFT
+IplImage* deblurGPU(IplImage *img, IplImage *psf)
+{
+    int height = img->height;
+    int width = img->width;
+
+    double scale = 1.0 / (double)(height * width);
+    double snr = 0.005;
+
+    cufftHandle     plan_f_img, plan_f_psf;
+    cufftHandle     plan_if_dst;
+
+    cufftComplex * imgDev;
+    cufftComplex * psfDev;
+    cufftComplex * dstDev;
+
+    cufftComplex * imgIn = (cufftComplex *) malloc (sizeof(cufftComplex) * height * width);
+    cufftComplex * psfIn = (cufftComplex *) malloc (sizeof(cufftComplex) * height * width);
+    cufftComplex * dstIn = (cufftComplex *) malloc (sizeof(cufftComplex) * height * width);
+
+    cudaMalloc ((void**) &imgDev, sizeof(cufftComplex) * height * width);
+    cudaMalloc ((void**) &psfDev, sizeof(cufftComplex) * height * width);
+    cudaMalloc ((void**) &dstDev, sizeof(cufftComplex) * height * width);
+
+    //copy
+    for(int h = 0 , k = 0; h < height; ++h){
+        for( int w = 0 ; w < width; ++w, ++k){
+            imgIn[k].x = (double) IMG_ELEM(img, h, w);
+            imgIn[k].y = 0.;
+        }
+    }
+
+    //copy psf
+    for(int h = 0 , k = 0; h < height; ++h){
+        for( int w = 0 ; w < width; ++w, ++k){
+            psfIn[k].x = (double)IMG_ELEM(psf, h, w) / 256.0;
+            psfIn[k].y = 0.;
+        }
+    }
+
+    cudaMemcpy(imgDev, imgIn, sizeof(cufftComplex) * height * width, cudaMemcpyHostToDevice);
+    cudaMemcpy(psfDev, psfIn, sizeof(cufftComplex) * height * width, cudaMemcpyHostToDevice);
+
+    cufftPlan2d(&plan_f_img, height, width, CUFFT_C2C);
+    cufftPlan2d(&plan_f_psf, height, width, CUFFT_C2C);
+    cufftPlan2d(&plan_if_dst, height, width, CUFFT_C2C);
+
+    cufftExecC2C(plan_f_img, imgDev, imgDev, CUFFT_FORWARD);
+    cufftExecC2C(plan_f_psf, psfDev, psfDev, CUFFT_FORWARD);
+
+    deconvolve(imgDev, psfDev, dstDev, height * width, 64);
+
+    cufftExecC2C(plan_if_dst, dstDev, dstDev, CUFFT_INVERSE);
+
+    IplImage* dst = cvCreateImage(cvGetSize(img), IPL_DEPTH_8U, 1);
+
+    cudaMemcpy(dstIn, dstDev, sizeof(cufftComplex) * height * width, cudaMemcpyDeviceToHost);
+
+    for(int h = 0, k = 0 ; h < height; ++h){
+        for( int w = 0; w < width; ++w, ++k){
+            IMG_ELEM(dst, h, w) = dstIn[k].x * scale;
+        }
+    }
+
+    cufftDestroy(plan_f_img);
+    cufftDestroy(plan_f_psf);
+    cufftDestroy(plan_if_dst);
+
+    free(imgIn);
+    free(psfIn);
+    free(dstIn);
+    cudaFree(imgDev);
+    cudaFree(psfDev);
+    cudaFree(dstDev);
 
     return dst;
 

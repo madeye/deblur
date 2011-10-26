@@ -50,9 +50,14 @@ int main( int argc, char* argv[]){
   IplImage* bl = cvClone(img);
   cvMerge(bl1, bl2, bl3, NULL, bl);
 
-  IplImage* dbl1 = deblurFilter(bl1, psfImg);
-  IplImage* dbl2 = deblurFilter(bl2, psfImg);
-  IplImage* dbl3 = deblurFilter(bl3, psfImg);
+  /*IplImage* dbl1 = deblurFilter(bl1, psfImg);*/
+  /*IplImage* dbl2 = deblurFilter(bl2, psfImg);*/
+  /*IplImage* dbl3 = deblurFilter(bl3, psfImg);*/
+
+  IplImage* dbl1 = deblurGPU(bl1, psfImg);
+  IplImage* dbl2 = deblurGPU(bl2, psfImg);
+  IplImage* dbl3 = deblurGPU(bl3, psfImg);
+
   IplImage* dbl = cvClone(img);
   cvMerge(dbl1, dbl2, dbl3, NULL, dbl);
 
