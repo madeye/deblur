@@ -11,13 +11,14 @@
 #include <cuda_runtime.h>
 #include <cufft.h>
 
-IplImage* deblurFilter(IplImage *img, IplImage *psf)
+IplImage* deblurFilter(IplImage *img, IplImage *psf, double snr)
 {
     int height = img->height;
     int width = img->width;
 
     double scale = 1.0 / (double)(height * width);
-    double snr = 0.005;
+
+    fftw_init_threads();
 
     fftw_plan     plan_f_img, plan_f_psf;
     fftw_plan     plan_if_dst;
@@ -49,6 +50,8 @@ IplImage* deblurFilter(IplImage *img, IplImage *psf)
             psfIn[k][1] = 0.;
         }
     }
+
+    fftw_plan_with_nthreads(4);
 
     plan_f_img = fftw_plan_dft_2d(width, height, imgIn, imgFreq, FFTW_FORWARD, FFTW_ESTIMATE);
     plan_f_psf = fftw_plan_dft_2d(width, height, psfIn, psfFreq, FFTW_FORWARD, FFTW_ESTIMATE);
@@ -96,18 +99,19 @@ IplImage* deblurFilter(IplImage *img, IplImage *psf)
     fftw_free(psfFreq);
     fftw_free(dstFreq);
 
+    fftw_cleanup_threads();
+
     return dst;
 
 }
 
 // deblur with CUFFT
-IplImage* deblurGPU(IplImage *img, IplImage *psf)
+IplImage* deblurGPU(IplImage *img, IplImage *psf, double snr)
 {
     int height = img->height;
     int width = img->width;
 
     double scale = 1.0 / (double)(height * width);
-    double snr = 0.005;
 
     cufftHandle     plan_f_img, plan_f_psf;
     cufftHandle     plan_if_dst;
@@ -150,7 +154,7 @@ IplImage* deblurGPU(IplImage *img, IplImage *psf)
     cufftExecC2C(plan_f_img, imgDev, imgDev, CUFFT_FORWARD);
     cufftExecC2C(plan_f_psf, psfDev, psfDev, CUFFT_FORWARD);
 
-    deconvolve(imgDev, psfDev, dstDev, height * width, 64);
+    deconvolve(imgDev, psfDev, dstDev, height * width, 64, snr);
 
     cufftExecC2C(plan_if_dst, dstDev, dstDev, CUFFT_INVERSE);
 

@@ -27,10 +27,11 @@ CVFLAGS = `pkg-config --cflags opencv`
 CVLIBS = `pkg-config --libs opencv`
 
 FFTWFLAGS = `pkg-config --cflags fftw3` 
-FFTWLIBS = `pkg-config --libs fftw3`
+FFTWLIBS = `pkg-config --libs fftw3` -lfftw3_threads
 
 CUDAFLAGS = -I/usr/local/cuda/include
 CUDALIBS = -L/usr/local/cuda/lib -lcufft
+NVCCFLAGS = -arch=sm_13 --use_fast_math
 
 #マクロ定義
 CC = gcc
@@ -58,7 +59,7 @@ ${OBJ_DIR}/%.o:${SRC_DIR}/%.c ${INCLUDE_HEADER} ${SRC_DIR}/%.h
 
 # CUDA COMPILER
 ${OBJ_DIR}/%.o:${SRC_DIR}/%.cu
-	${NVCC} $< -c -o $@  ${DEBUG}
+	${NVCC} $< -c -o $@  ${DEBUG} ${NVCCFLAGS}
 
 clean:
 	rm -f ${TARGET} ${OBJS} ${CUDA_OBJS}

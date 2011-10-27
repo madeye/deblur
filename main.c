@@ -88,21 +88,30 @@ void genPSF(double *psf, int height, int width, int radius, double stddev) {
 int main( int argc, char* argv[]){
 
     char c;
-    int fileFlag = 0, errFlag = 0, gpuFlag = 0, kernelSize = 2;
+    int fileFlag = 0, errFlag = 0, gpuFlag = 0, kernelSize = 2, blurFlag = 0;
     float stddev = 1.0f;
+    double snr = 0.005;
     char * filename;
     extern char *optarg;
     extern int optind, optopt, opterr;
 
-    while ((c = getopt(argc, argv, ":gs:d:f:")) != -1) {
+    while ((c = getopt(argc, argv, ":bgk:s:d:f:")) != -1) {
         switch(c) {
+            case 'b':
+                printf("Blur image first\n");
+                blurFlag = 1;
+                break;
             case 'g':
                 printf("Use GPU Kernel\n");
                 gpuFlag = 1;
                 break;
-            case 's':
+            case 'k':
                 kernelSize = atoi(optarg);
                 printf("Kernel size: %d\n", kernelSize);
+                break;
+            case 's':
+                snr = atof(optarg);
+                printf("Singal-to-noise ratio: %f\n", snr);
                 break;
             case 'd':
                 stddev = atof(optarg);
@@ -169,24 +178,25 @@ int main( int argc, char* argv[]){
         }
     }
 
-    IplImage* bl1 = blurPSF(imgSplit[0], psfImg);
-    IplImage* bl2 = blurPSF(imgSplit[1], psfImg);
-    IplImage* bl3 = blurPSF(imgSplit[2], psfImg);
-    IplImage* bl = cvClone(img);
-    cvMerge(bl1, bl2, bl3, NULL, bl);
+    if (blurFlag) {
+        imgSplit[0] = blurPSF(imgSplit[0], psfImg);
+        imgSplit[1] = blurPSF(imgSplit[1], psfImg);
+        imgSplit[2] = blurPSF(imgSplit[2], psfImg);
+        cvMerge(imgSplit[0], imgSplit[1], imgSplit[2], NULL, img);
+    }
 
     IplImage* dbl1;
     IplImage* dbl2;
     IplImage* dbl3;
 
     if (gpuFlag) {
-        dbl1 = deblurGPU(bl1, psfImg);
-        dbl2 = deblurGPU(bl2, psfImg);
-        dbl3 = deblurGPU(bl3, psfImg);
+        dbl1 = deblurGPU(imgSplit[0], psfImg, snr);
+        dbl2 = deblurGPU(imgSplit[1], psfImg, snr);
+        dbl3 = deblurGPU(imgSplit[2], psfImg, snr);
     } else {
-        dbl1 = deblurFilter(bl1, psfImg);
-        dbl2 = deblurFilter(bl2, psfImg);
-        dbl3 = deblurFilter(bl3, psfImg);
+        dbl1 = deblurFilter(imgSplit[0], psfImg, snr);
+        dbl2 = deblurFilter(imgSplit[1], psfImg, snr);
+        dbl3 = deblurFilter(imgSplit[2], psfImg, snr);
     }
 
     IplImage* dbl = cvClone(img);
@@ -208,10 +218,10 @@ int main( int argc, char* argv[]){
     rect.width = srcImg->width;
     rect.height = srcImg->height;
 
-    cvSetImageROI(bl, rect);
+    cvSetImageROI(img, rect);
     cvSetImageROI(dbl, rect);
 
-    blurROI = cvCloneImage(bl);
+    blurROI = cvCloneImage(img);
     deblurROI = cvCloneImage(dbl);
 
     cvSaveImage(psfFile, psfImg, 0);
@@ -225,11 +235,6 @@ int main( int argc, char* argv[]){
     cvReleaseImage(&psfImg);
     cvReleaseImage(&img);
 
-    cvReleaseImage(&bl);
-    cvReleaseImage(&bl1);
-    cvReleaseImage(&bl2);
-    cvReleaseImage(&bl3);
-
     cvReleaseImage(&dbl);
     cvReleaseImage(&dbl1);
     cvReleaseImage(&dbl2);
@@ -239,9 +244,11 @@ int main( int argc, char* argv[]){
 
 ERROR:
     fprintf(stderr, "Usage: -f [/path/to/image/file]           path to the image file\n"); 
-    fprintf(stderr, "       -s [2]                             kernel size\n"); 
+    fprintf(stderr, "       -k [2]                             kernel size\n"); 
+    fprintf(stderr, "       -s [0.005]                         signal-to-noise ratio\n"); 
     fprintf(stderr, "       -d [1.0]                           standard deviation\n"); 
     fprintf(stderr, "       -g                                 use GPU kernel\n"); 
+    fprintf(stderr, "       -b                                 blur image first\n"); 
     return 1;
 
 }
