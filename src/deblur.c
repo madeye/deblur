@@ -46,7 +46,7 @@ IplImage* deblurFilter(IplImage *img, IplImage *psf, double snr)
         for( int w = 0 ; w < width; ++w, ++k){
             /*int y = height - h;*/
             /*int x = width - w;*/
-            psfIn[k][0] = (double)IMG_ELEM(psf, h, w) / 256.0;
+            psfIn[k][0] = (double)IMG_ELEM(psf, h, w) / 255.0;
             psfIn[k][1] = 0.;
         }
     }
@@ -139,7 +139,7 @@ IplImage* deblurGPU(IplImage *img, IplImage *psf, double snr)
     //copy psf
     for(int h = 0 , k = 0; h < height; ++h){
         for( int w = 0 ; w < width; ++w, ++k){
-            psfIn[k].x = (double)IMG_ELEM(psf, h, w) / 256.0;
+            psfIn[k].x = (double)IMG_ELEM(psf, h, w) / 255.0;
             psfIn[k].y = 0.;
         }
     }

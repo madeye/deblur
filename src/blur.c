@@ -132,7 +132,7 @@ IplImage* blurPSF(IplImage *img, IplImage *psf)
             /*int y = height - h;*/
             /*int x = width - w;*/
             /*psfIn[k][0] = (double)IMG_ELEM(psf, y, x);*/
-            psfIn[k][0] = (double)IMG_ELEM(psf, h, w) / 256.0;
+            psfIn[k][0] = (double)IMG_ELEM(psf, h, w) / 255.0;
             psfIn[k][1] = 0.;
         }
     }

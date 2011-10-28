@@ -6,7 +6,99 @@
 #include "deblur.h"
 #include "include.h"
 
-void genPSF(double *psf, int height, int width, int radius, double stddev) {
+#define PRINT_KERNEL
+#define PRINT_PSF
+
+void kernelToPSF (double *psf, double *kernel, int height, int width, int kheight, int kwidth) {
+
+    int centerx = kwidth / 2;
+    int centery = kheight / 2;
+
+    // left top
+    for (int i = centery, h = 0; i < kheight; i++, h++) {
+        for (int j = centerx, w = 0; j < kwidth; j++, w++) {
+            psf[h * width + w] = kernel[i * kwidth + j];
+        }
+    }
+
+    // right top
+    for (int i = centery, h = 0; i < kheight; i++, h++) {
+        for (int j = centerx - 1, w = width - 1; j >= 0; j--, w--) {
+            psf[h * width + w] = kernel[i * kwidth + j];
+        }
+    }
+
+    // left bottom
+    for (int i = centery - 1, h = height - 1; i >= 0; i--, h--) {
+        for (int j = centerx, w = 0; j < kwidth; j++, w++) {
+            psf[h * width + w] = kernel[i * kwidth + j];
+        }
+    }
+
+    // right bottom
+    for (int i = centery - 1, h = height - 1; i >= 0; i--, h--) {
+        for (int j = centerx - 1, w = width - 1; j >= 0; j--, w--) {
+            psf[h * width + w] = kernel[i * kwidth + j];
+        }
+    }
+}
+
+void readPSF(double *psf, IplImage *kernelImage, int height, int width) {
+
+    int kwidth = kernelImage->width, kheight = kernelImage->height;
+    double *kernel = (double *) malloc (sizeof(double) * kwidth * kheight);
+    double total = 0.0;
+
+    for (int h = 0; h < kheight; h++) {
+        for (int w = 0; w < kwidth; w++) {
+            kernel[h * kwidth + w] = IMG_ELEM(kernelImage, h, w);
+        }
+    }
+
+    for (int i = 0; i < kwidth * kheight; i++) {
+        total += kernel[i];
+    }
+
+    printf("%f\n", total);
+
+    /*for (int i = 0; i < kwidth * kheight; i++) {*/
+        /*kernel[i] /= total;*/
+        /*kernel[i] *= 255.0 ;*/
+    /*}*/
+
+#ifdef PRINT_KERNEL
+    for (int i = 0; i < kwidth * kheight; i++) {
+        if (i % kwidth == 0)
+            printf("\n");
+        printf("%lf ", kernel[i]);
+    }
+    printf("\n");
+#endif
+
+    kernelToPSF(psf, kernel, height, width, kheight, kwidth);
+
+    /*int offsetx = width / 2 - kwidth / 2; */
+    /*int offsety = height / 2 - kheight / 2; */
+
+    /*for (int y = offsety, h = 0, i = 0; h < kheight; y++, h++) {*/
+        /*for (int x = offsetx, w = 0; w < kwidth; x++, w++, i++) {*/
+            /*int k = y * width + x;*/
+            /*psf[k] = kernel[i];*/
+        /*}*/
+    /*}*/
+
+#ifdef PRINT_PSF
+    for (int i = 0; i < width * height; i++) {
+        if (i % width == 0)
+            printf("\n");
+        printf ("%lf ", psf[i]);
+    }
+    printf("\n");
+#endif
+
+}
+
+void genPSF(double *psf, int height, int width, int radius, double stddev, double ux, double uy) {
 
     int side = radius * 2 + 1;
 
@@ -18,12 +110,12 @@ void genPSF(double *psf, int height, int width, int radius, double stddev) {
         double xdist = 0.0, ydist = 0.0;
         for (int i = 0, k = 0; i < side; i++) {
             for (int j = 0; j < side; j++, k++) {
-                xdist = abs((side - 1) / 2.0 - j);
-                ydist = abs((side - 1) / 2.0 - i);
-                double m = 200.0 * (1 / (pow(stddev, 2) * 2.0 * M_PI));
+                xdist = abs((side - 1) / 2.0 + ux - j);
+                ydist = abs((side - 1) / 2.0 + uy - i);
+                double m = 100 * 1 / sqrt(pow(stddev, 2) * 2.0 * M_PI);
                 double pn = -(pow(xdist, 2) + pow(ydist, 2));
                 double pd = 2.0 * pow(stddev, 2);
-                kernel[k] = (int) (m * exp(pn / pd));
+                kernel[k] = (m * exp(pn / pd));
             }
         }
         double total = 0.0;
@@ -32,7 +124,7 @@ void genPSF(double *psf, int height, int width, int radius, double stddev) {
         }
         for (int i = 0; i < side * side; i++) {
             kernel[i] /= total;
-            kernel[i] *= 256.0;
+            kernel[i] *= 255.0;
         }
     }
     else {
@@ -45,42 +137,18 @@ void genPSF(double *psf, int height, int width, int radius, double stddev) {
             printf("\n");
         printf("%lf ", kernel[i]);
     }
+    printf("\n");
 #endif
 
-    // left top
-    for (int i = radius, h = 0; i < side; i++, h++) {
-        for (int j = radius, w = 0; j < side; j++, w++) {
-            psf[h * width + w] = kernel[i * side + j];
-        }
-    }
+    kernelToPSF(psf, kernel, height, width, side, side);
 
-    // right top
-    for (int i = radius, h = 0; i < side; i++, h++) {
-        for (int j = radius - 1, w = width - 1; j >= 0; j--, w--) {
-            psf[h * width + w] = kernel[i * side + j];
-        }
-    }
-
-    // left bottom
-    for (int i = radius - 1, h = height - 1; i >= 0; i--, h--) {
-        for (int j = radius, w = 0; j < side; j++, w++) {
-            psf[h * width + w] = kernel[i * side + j];
-        }
-    }
-
-    // right bottom
-    for (int i = radius - 1, h = height - 1; i >= 0; i--, h--) {
-        for (int j = radius - 1, w = width - 1; j >= 0; j--, w--) {
-            psf[h * width + w] = kernel[i * side + j];
-        }
-    }
-
-#ifdef PRINT_KERNEL
+#ifdef PRINT_PSF
     for (int i = 0; i < width * height; i++) {
         if (i % width == 0)
             printf("\n");
         printf ("%lf ", psf[i]);
     }
+    printf("\n");
 #endif
 
 }
@@ -88,14 +156,15 @@ void genPSF(double *psf, int height, int width, int radius, double stddev) {
 int main( int argc, char* argv[]){
 
     char c;
-    int fileFlag = 0, errFlag = 0, gpuFlag = 0, kernelSize = 2, blurFlag = 0;
+    int fileFlag = 0, psfFlag = 0, errFlag = 0, gpuFlag = 0, kernelSize = 2, blurFlag = 0,
+        ux = 0, uy = 0;
     float stddev = 1.0f;
     double snr = 0.005;
-    char * filename;
+    char *filename, *psfname;
     extern char *optarg;
     extern int optind, optopt, opterr;
 
-    while ((c = getopt(argc, argv, ":bgk:s:d:f:")) != -1) {
+    while ((c = getopt(argc, argv, ":bgk:s:d:f:p:x:y:")) != -1) {
         switch(c) {
             case 'b':
                 printf("Blur image first\n");
@@ -121,6 +190,19 @@ int main( int argc, char* argv[]){
                 filename = optarg;
                 fileFlag = 1;
                 printf("Processing file: %s\n", filename);
+                break;
+            case 'p':
+                psfname = optarg;
+                psfFlag = 1;
+                printf("Kernel image: %s\n", psfname);
+                break;
+            case 'x':
+                ux = atoi(optarg);
+                printf("Offset X: %f\n", ux);
+                break;
+            case 'y':
+                uy = atoi(optarg);
+                printf("Offset Y: %f\n", uy);
                 break;
             case ':':
                 printf("-%c without input\n", optopt);
@@ -149,7 +231,7 @@ int main( int argc, char* argv[]){
         CvSize size = cvSize(side, side);
         img = cvCreateImage(size, IPL_DEPTH_8U, 3);
         CvPoint offset = cvPoint((side - srcImg->width) / 2, (side - srcImg->height) / 2);
-        cvCopyMakeBorder(srcImg, img, offset, IPL_BORDER_REPLICATE, cvScalarAll(0));
+        cvCopyMakeBorder(srcImg, img, offset, IPL_BORDER_CONSTANT, cvScalarAll(0));
     } else {
         img = srcImg;
     }
@@ -168,7 +250,15 @@ int main( int argc, char* argv[]){
     if(!img || !psf) return 1;
 
     // cyclic 
-    genPSF(psf, img->height, img->width, kernelSize, stddev);
+    if (psfFlag) {
+        IplImage *kernelImage = cvLoadImage(psfname, CV_LOAD_IMAGE_GRAYSCALE);
+        if (!kernelImage) {
+            goto ERROR;
+        }
+        readPSF(psf, kernelImage, img->height, img->width);
+    } else {
+        genPSF(psf, img->height, img->width, kernelSize, stddev, ux, uy);
+    }
 
     IplImage* psfImg = cvCreateImage(cvGetSize(img), IPL_DEPTH_8U, 1);
 
@@ -199,13 +289,25 @@ int main( int argc, char* argv[]){
         dbl3 = deblurFilter(imgSplit[2], psfImg, snr);
     }
 
+
     IplImage* dbl = cvClone(img);
     cvMerge(dbl1, dbl2, dbl3, NULL, dbl);
 
     char psfFile[256], blurFile[256], deblurFile[256];
-    snprintf(psfFile, 250, "%s_psf.bmp", filename);
-    snprintf(blurFile, 250, "%s_blur.bmp", filename);
-    snprintf(deblurFile, 250, "%s_deblur.bmp", filename);
+
+    char *pch = strchr(filename, '.');
+    (*pch) = '\0';
+
+    if (blurFlag) {
+        snprintf(psfFile, 250, "%s_psf.bmp", filename);
+        snprintf(blurFile, 250, "%s_blur.bmp", filename);
+    }
+
+    if (psfFlag) {
+        snprintf(deblurFile, 250, "%s_%2.4f_deblur.bmp", filename, snr);
+    } else {
+        snprintf(deblurFile, 250, "%s_%d_%2.2f_%2.4f_deblur.bmp", filename, kernelSize, stddev, snr);
+    }
 
     // ROI
     IplImage* blurROI;
@@ -218,14 +320,16 @@ int main( int argc, char* argv[]){
     rect.width = srcImg->width;
     rect.height = srcImg->height;
 
-    cvSetImageROI(img, rect);
+    if (blurFlag) {
+        cvSetImageROI(img, rect);
+        blurROI = cvCloneImage(img);
+
+        cvSaveImage(psfFile, psfImg, 0);
+        cvSaveImage(blurFile, blurROI, 0);
+    }
+
     cvSetImageROI(dbl, rect);
-
-    blurROI = cvCloneImage(img);
     deblurROI = cvCloneImage(dbl);
-
-    cvSaveImage(psfFile, psfImg, 0);
-    cvSaveImage(blurFile, blurROI, 0);
     cvSaveImage(deblurFile, deblurROI, 0);
 
     cvReleaseImage(&imgSplit[0]);
