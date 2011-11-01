@@ -6,8 +6,8 @@
 #include "deblur.h"
 #include "include.h"
 
-#define PRINT_KERNEL
-#define PRINT_PSF
+/*#define PRINT_KERNEL*/
+/*#define PRINT_PSF*/
 
 void kernelToPSF (double *psf, double *kernel, int height, int width, int kheight, int kwidth) {
 
@@ -198,11 +198,11 @@ int main( int argc, char* argv[]){
                 break;
             case 'x':
                 ux = atoi(optarg);
-                printf("Offset X: %f\n", ux);
+                printf("Offset X: %d\n", ux);
                 break;
             case 'y':
                 uy = atoi(optarg);
-                printf("Offset Y: %f\n", uy);
+                printf("Offset Y: %d\n", uy);
                 break;
             case ':':
                 printf("-%c without input\n", optopt);
@@ -347,10 +347,13 @@ int main( int argc, char* argv[]){
     return 0;
 
 ERROR:
-    fprintf(stderr, "Usage: -f [/path/to/image/file]           path to the image file\n"); 
+    fprintf(stderr, "Usage: -f [/path/to/image]                path to the image file\n"); 
+    fprintf(stderr, "       -p [/path/to/kernel]               path to the kernel\n"); 
     fprintf(stderr, "       -k [2]                             kernel size\n"); 
     fprintf(stderr, "       -s [0.005]                         signal-to-noise ratio\n"); 
     fprintf(stderr, "       -d [1.0]                           standard deviation\n"); 
+    fprintf(stderr, "       -x [0]                             center offset x\n"); 
+    fprintf(stderr, "       -y [0]                             center offset y\n"); 
     fprintf(stderr, "       -g                                 use GPU kernel\n"); 
     fprintf(stderr, "       -b                                 blur image first\n"); 
     return 1;

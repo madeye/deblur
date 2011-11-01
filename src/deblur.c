@@ -66,7 +66,6 @@ IplImage* deblurFilter(IplImage *img, IplImage *psf, double snr)
             double b = imgFreq[k][1];
             double c = psfFreq[k][0];
             double d = psfFreq[k][1];
-            /*printf("%d, %d, %d, %d", a, b, c, d);*/
 
             dstFreq[k][0] = (a*c + b*d) / ((c*c + d*d) + snr);
             dstFreq[k][1] = (b*c - a*d) / ((c*c + d*d) + snr); 
@@ -76,16 +75,17 @@ IplImage* deblurFilter(IplImage *img, IplImage *psf, double snr)
 
     fftw_execute(plan_if_dst);
 
-    /*normalize(dstIn, height * width);*/
-
     IplImage* dst = cvCreateImage(cvGetSize(img), IPL_DEPTH_8U, 1);
 
     for(int h = 0, k = 0 ; h < height; ++h){
         for( int w = 0; w < width; ++w, ++k){
-            IMG_ELEM(dst, h, w) = dstIn[k][0] * scale;
-            /*printf("%d ", dstIn[k]);*/
+            double tmp = dstIn[k][0] * scale;
+            if (tmp > 255)
+                tmp = 255;
+            if (tmp < 0)
+                tmp = 0;
+            IMG_ELEM(dst, h, w) = tmp;
         }
-        /*printf("\n");*/
     }
 
     fftw_destroy_plan(plan_f_img);
@@ -164,7 +164,12 @@ IplImage* deblurGPU(IplImage *img, IplImage *psf, double snr)
 
     for(int h = 0, k = 0 ; h < height; ++h){
         for( int w = 0; w < width; ++w, ++k){
-            IMG_ELEM(dst, h, w) = dstIn[k].x * scale;
+            double tmp = dstIn[k].x * scale;
+            if (tmp > 255)
+                tmp = 255;
+            if (tmp < 0)
+                tmp = 0;
+            IMG_ELEM(dst, h, w) = tmp;
         }
     }
 
