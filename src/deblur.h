@@ -7,7 +7,7 @@
 #include <cv.h>
 #include <highgui.h>
 
-IplImage* deblurFilter(IplImage *img, IplImage *psf, double snr);
-IplImage* deblurGPU(IplImage *img, IplImage *psf, double snr);
+IplImage* deblurFilter(IplImage *img, IplImage *psf, double snr, double srcScale);
+IplImage* deblurGPU(IplImage *img, IplImage *psf, double snr, double srcScale);
 
 #endif

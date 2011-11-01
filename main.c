@@ -43,11 +43,12 @@ void kernelToPSF (double *psf, double *kernel, int height, int width, int kheigh
     }
 }
 
-void readPSF(double *psf, IplImage *kernelImage, int height, int width) {
+double readPSF(double *psf, IplImage *kernelImage, int height, int width) {
 
     int kwidth = kernelImage->width, kheight = kernelImage->height;
     double *kernel = (double *) malloc (sizeof(double) * kwidth * kheight);
     double total = 0.0;
+    double scale = 0.0;
 
     for (int h = 0; h < kheight; h++) {
         for (int w = 0; w < kwidth; w++) {
@@ -55,16 +56,21 @@ void readPSF(double *psf, IplImage *kernelImage, int height, int width) {
         }
     }
 
+    double max = 0;
     for (int i = 0; i < kwidth * kheight; i++) {
         total += kernel[i];
+        if (max < kernel[i])
+            max = kernel[i];
     }
+
+    scale = 255.0 / max;
 
     printf("%f\n", total);
 
-    /*for (int i = 0; i < kwidth * kheight; i++) {*/
-        /*kernel[i] /= total;*/
-        /*kernel[i] *= 255.0 ;*/
-    /*}*/
+    for (int i = 0; i < kwidth * kheight; i++) {
+        kernel[i] /= total;
+        kernel[i] *= scale ;
+    }
 
 #ifdef PRINT_KERNEL
     for (int i = 0; i < kwidth * kheight; i++) {
@@ -77,16 +83,6 @@ void readPSF(double *psf, IplImage *kernelImage, int height, int width) {
 
     kernelToPSF(psf, kernel, height, width, kheight, kwidth);
 
-    /*int offsetx = width / 2 - kwidth / 2; */
-    /*int offsety = height / 2 - kheight / 2; */
-
-    /*for (int y = offsety, h = 0, i = 0; h < kheight; y++, h++) {*/
-        /*for (int x = offsetx, w = 0; w < kwidth; x++, w++, i++) {*/
-            /*int k = y * width + x;*/
-            /*psf[k] = kernel[i];*/
-        /*}*/
-    /*}*/
-
 #ifdef PRINT_PSF
     for (int i = 0; i < width * height; i++) {
         if (i % width == 0)
@@ -96,11 +92,15 @@ void readPSF(double *psf, IplImage *kernelImage, int height, int width) {
     printf("\n");
 #endif
 
+    return scale;
+
 }
 
-void genPSF(double *psf, int height, int width, int radius, double stddev, double ux, double uy) {
+double genPSF(double *psf, int height, int width, int radius, double stddev, double ux, double uy) {
 
     int side = radius * 2 + 1;
+
+    double scale = 0;
 
     double *kernel = (double *) malloc (sizeof(double) * side * side);
     memset(kernel, sizeof(double) * side * side, 0.0);
@@ -119,12 +119,18 @@ void genPSF(double *psf, int height, int width, int radius, double stddev, doubl
             }
         }
         double total = 0.0;
+        double max = 0;
         for (int i = 0; i < side * side; i++) {
             total += kernel[i];
+            if (max < kernel[i])
+                max = kernel[i];
         }
+
+        scale = 255.0 / max;
+
         for (int i = 0; i < side * side; i++) {
             kernel[i] /= total;
-            kernel[i] *= 255.0;
+            kernel[i] *= scale;
         }
     }
     else {
@@ -150,6 +156,8 @@ void genPSF(double *psf, int height, int width, int radius, double stddev, doubl
     }
     printf("\n");
 #endif
+
+    return scale;
 
 }
 
@@ -249,22 +257,24 @@ int main( int argc, char* argv[]){
 
     if(!img || !psf) return 1;
 
+    double scale = 0;
+
     // cyclic 
     if (psfFlag) {
         IplImage *kernelImage = cvLoadImage(psfname, CV_LOAD_IMAGE_GRAYSCALE);
         if (!kernelImage) {
             goto ERROR;
         }
-        readPSF(psf, kernelImage, img->height, img->width);
+        scale = readPSF(psf, kernelImage, img->height, img->width);
     } else {
-        genPSF(psf, img->height, img->width, kernelSize, stddev, ux, uy);
+        scale = genPSF(psf, img->height, img->width, kernelSize, stddev, ux, uy);
     }
 
-    IplImage* psfImg = cvCreateImage(cvGetSize(img), IPL_DEPTH_8U, 1);
+    IplImage* psfImg = cvCreateImage(cvGetSize(img), IPL_DEPTH_64F, 1);
 
     for(int h = 0 ; h < img->height; ++h){
         for( int w = 0; w < img->width; ++w){
-            IMG_ELEM(psfImg, h, w) = psf[h * img->width + w];
+            IMG_ELEM_DOUBLE(psfImg, h, w) = psf[h * img->width + w];
         }
     }
 
@@ -280,13 +290,13 @@ int main( int argc, char* argv[]){
     IplImage* dbl3;
 
     if (gpuFlag) {
-        dbl1 = deblurGPU(imgSplit[0], psfImg, snr);
-        dbl2 = deblurGPU(imgSplit[1], psfImg, snr);
-        dbl3 = deblurGPU(imgSplit[2], psfImg, snr);
+        dbl1 = deblurGPU(imgSplit[0], psfImg, snr, scale);
+        dbl2 = deblurGPU(imgSplit[1], psfImg, snr, scale);
+        dbl3 = deblurGPU(imgSplit[2], psfImg, snr, scale);
     } else {
-        dbl1 = deblurFilter(imgSplit[0], psfImg, snr);
-        dbl2 = deblurFilter(imgSplit[1], psfImg, snr);
-        dbl3 = deblurFilter(imgSplit[2], psfImg, snr);
+        dbl1 = deblurFilter(imgSplit[0], psfImg, snr, scale);
+        dbl2 = deblurFilter(imgSplit[1], psfImg, snr, scale);
+        dbl3 = deblurFilter(imgSplit[2], psfImg, snr, scale);
     }
 
 

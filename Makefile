@@ -37,6 +37,7 @@ NVCCFLAGS = -arch=sm_13 --use_fast_math
 CC = gcc
 NVCC = nvcc
 CFLAGS =-std=gnu99 \
+		-fopenmp \
 	-I${INCLUDE_DIR}
 DEBUG = -g -O2
 CLIBFLAGS = -lm -lstdc++ #リンクするもの

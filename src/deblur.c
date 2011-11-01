@@ -11,7 +11,7 @@
 #include <cuda_runtime.h>
 #include <cufft.h>
 
-IplImage* deblurFilter(IplImage *img, IplImage *psf, double snr)
+IplImage* deblurFilter(IplImage *img, IplImage *psf, double snr, double srcScale)
 {
     int height = img->height;
     int width = img->width;
@@ -46,7 +46,7 @@ IplImage* deblurFilter(IplImage *img, IplImage *psf, double snr)
         for( int w = 0 ; w < width; ++w, ++k){
             /*int y = height - h;*/
             /*int x = width - w;*/
-            psfIn[k][0] = (double)IMG_ELEM(psf, h, w) / 255.0;
+            psfIn[k][0] = (double)IMG_ELEM_DOUBLE(psf, h, w) / srcScale;
             psfIn[k][1] = 0.;
         }
     }
@@ -60,8 +60,12 @@ IplImage* deblurFilter(IplImage *img, IplImage *psf, double snr)
     fftw_execute(plan_f_img);
     fftw_execute(plan_f_psf);
 
-    for(int h = 0, k = 0; h < height; ++h){
-        for( int w = 0 ; w < width; ++w, ++k){
+#pragma omp parallel for
+    for(int h = 0; h < height; ++h){
+        for( int w = 0 ; w < width; ++w){
+
+            int k = h * width + w;
+
             double a = imgFreq[k][0];
             double b = imgFreq[k][1];
             double c = psfFreq[k][0];
@@ -106,7 +110,7 @@ IplImage* deblurFilter(IplImage *img, IplImage *psf, double snr)
 }
 
 // deblur with CUFFT
-IplImage* deblurGPU(IplImage *img, IplImage *psf, double snr)
+IplImage* deblurGPU(IplImage *img, IplImage *psf, double snr, double srcScale)
 {
     int height = img->height;
     int width = img->width;
@@ -139,7 +143,7 @@ IplImage* deblurGPU(IplImage *img, IplImage *psf, double snr)
     //copy psf
     for(int h = 0 , k = 0; h < height; ++h){
         for( int w = 0 ; w < width; ++w, ++k){
-            psfIn[k].x = (double)IMG_ELEM(psf, h, w) / 255.0;
+            psfIn[k].x = (double)IMG_ELEM_DOUBLE(psf, h, w) / srcScale;
             psfIn[k].y = 0.;
         }
     }
