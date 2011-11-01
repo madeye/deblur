@@ -120,8 +120,13 @@ double genPSF(double *psf, int height, int width, int radius, double stddev, dou
         }
         double total = 0.0;
         double max = 0;
+
         for (int i = 0; i < side * side; i++) {
             total += kernel[i];
+        }
+
+        for (int i = 0; i < side * side; i++) {
+            kernel[i] /= total;
             if (max < kernel[i])
                 max = kernel[i];
         }
@@ -129,9 +134,9 @@ double genPSF(double *psf, int height, int width, int radius, double stddev, dou
         scale = 255.0 / max;
 
         for (int i = 0; i < side * side; i++) {
-            kernel[i] /= total;
             kernel[i] *= scale;
         }
+
     }
     else {
         kernel[(side * side - 1) / 2] = 1.0;
@@ -316,7 +321,7 @@ int main( int argc, char* argv[]){
     if (psfFlag) {
         snprintf(deblurFile, 250, "%s_%2.4f_deblur.bmp", filename, snr);
     } else {
-        snprintf(deblurFile, 250, "%s_%d_%2.2f_%2.4f_deblur.bmp", filename, kernelSize, stddev, snr);
+        snprintf(deblurFile, 250, "%s_%d_%2.2f_%2.4f_%d_%d_deblur.bmp", filename, kernelSize, stddev, snr, ux, uy);
     }
 
     // ROI
