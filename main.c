@@ -314,14 +314,14 @@ int main( int argc, char* argv[]){
     (*pch) = '\0';
 
     if (blurFlag) {
-        snprintf(psfFile, 250, "%s_psf.bmp", filename);
-        snprintf(blurFile, 250, "%s_blur.bmp", filename);
+        snprintf(psfFile, 250, "%s_psf.png", filename);
+        snprintf(blurFile, 250, "%s_blur.png", filename);
     }
 
     if (psfFlag) {
-        snprintf(deblurFile, 250, "%s_%2.4f_deblur.bmp", filename, snr);
+        snprintf(deblurFile, 250, "%s_%2.4f_deblur.png", filename, snr);
     } else {
-        snprintf(deblurFile, 250, "%s_%d_%2.2f_%2.4f_%d_%d_deblur.bmp", filename, kernelSize, stddev, snr, ux, uy);
+        snprintf(deblurFile, 250, "%s_%d_%2.2f_%2.4f_%d_%d_deblur.png", filename, kernelSize, stddev, snr, ux, uy);
     }
 
     // ROI
