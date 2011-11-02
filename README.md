@@ -36,5 +36,6 @@ Usage:     -f [/path/to/image]                path to the image file
 License
 -------
 DEBLUR is Copyright (c) 2011, Max Lv <max.c.lv@gmail.com>, Fudan Univ. 
+
 DEBLUR is licensed under MIT License.
 
