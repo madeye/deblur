@@ -9,14 +9,14 @@ and GPU using state-of-the-art parallel technology.
 Compiling
 ---------
 To compile the whole project, you should meet three prerequirements:
-    1. OpenCV 2.3
-    2. FFFW 3.2
-    3. CUDA 2.3
+* OpenCV 2.3
+* FFFW 3.2
+* CUDA 2.3
 
 Running
 -------
 A command line interface is provided as follow:
-
+`
 Usage:     -f [/path/to/image]                path to the image file
            -p [/path/to/kernel/image]         path to the kernel image
            -k [2]                             kernel size
@@ -27,6 +27,7 @@ Usage:     -f [/path/to/image]                path to the image file
            -e [0.0]                           enhance with a gamma value
            -g                                 use GPU kernel
            -b                                 blur image first
+`
 
 License
 -------
