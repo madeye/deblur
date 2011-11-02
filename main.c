@@ -238,13 +238,13 @@ int main( int argc, char* argv[]){
     if (!srcImg) 
         goto ERROR;
 
-    int side = max(srcImg->width, srcImg->height);
+    int side = max(srcImg->width, srcImg->height) + kernelSize * 2;
 
     if (srcImg->height != srcImg->width) {
         CvSize size = cvSize(side, side);
         img = cvCreateImage(size, IPL_DEPTH_8U, 3);
         CvPoint offset = cvPoint((side - srcImg->width) / 2, (side - srcImg->height) / 2);
-        cvCopyMakeBorder(srcImg, img, offset, IPL_BORDER_CONSTANT, cvScalarAll(0));
+        cvCopyMakeBorder(srcImg, img, offset, IPL_BORDER_REPLICATE, cvScalarAll(0));
     } else {
         img = srcImg;
     }
