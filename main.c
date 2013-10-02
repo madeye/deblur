@@ -363,7 +363,7 @@ int main( int argc, char* argv[]){
 
 ERROR:
     fprintf(stderr, "Usage: -f [/path/to/image]                path to the image file\n"); 
-    fprintf(stderr, "       -p [/path/to/kernel]               path to the kernel\n"); 
+    fprintf(stderr, "       -p [/path/to/psf]                  path to the psf file\n"); 
     fprintf(stderr, "       -k [2]                             kernel size\n"); 
     fprintf(stderr, "       -s [0.005]                         signal-to-noise ratio\n"); 
     fprintf(stderr, "       -d [1.0]                           standard deviation\n"); 
