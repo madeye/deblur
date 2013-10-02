@@ -22,7 +22,7 @@ A command line interface is provided as follow:
 
 <pre>
 Usage:     -f [/path/to/image]                path to the image file
-           -p [/path/to/kernel/image]         path to the kernel image
+           -p [/path/to/psf]                  path to the psf file
            -k [2]                             kernel size
            -s [0.005]                         signal-to-noise ratio
            -d [1.0]                           standard deviation
